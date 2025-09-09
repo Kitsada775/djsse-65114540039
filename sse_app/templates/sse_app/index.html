@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSE Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+        }
+
+        #progress {
+            font-size: 20px;
+            font-weight: bold;
+            color: #ff9800;
+            text-align: center;
+            padding: 10px;
+            background-color: #fff;
+            border: 2px solid #ff9800;
+            border-radius: 5px;
+            width: 200px;
+            margin: 20px auto;
+        }
+
+        #status {
+            font-size: 18px;
+            text-align: center;
+            margin-top: 10px;
+            color: #2196F3;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 5px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        #debug {
+            background: #f0f0f0;
+            padding: 10px;
+            margin-top: 20px;
+            font-family: monospace;
+            max-height: 200px;
+            overflow-y: auto;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Circular progress */
+        #circle-container {
+            text-align: center;
+            margin-top: 30px;
+        }
+        svg {
+            transform: rotate(-90deg);
+        }
+        circle {
+            transition: stroke-dashoffset 1s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>SSE Live Progress</h1>
+        <div id="progress">กดปุ่มเพื่อเริ่ม...</div>
+        <div id="status"></div>
+        <div style="text-align: center;">
+            <button onclick="startSSE()">เริ่ม</button>
+            <button onclick="stopSSE()">หยุด</button>
+        </div>
+
+        <!-- Circular Progress -->
+        <div id="circle-container">
+            <svg width="120" height="120">
+                <circle cx="60" cy="60" r="50" stroke="#ddd" stroke-width="10" fill="none"></circle>
+                <circle id="circle-progress" cx="60" cy="60" r="50" stroke="#4caf50" stroke-width="10" fill="none" stroke-dasharray="314" stroke-dashoffset="314"></circle>
+            </svg>
+        </div>
+
+        <div id="debug"></div>
+    </div>
+
+    <script>
+        let eventSource = null;
+
+        function log(message) {
+            const debug = document.getElementById('debug');
+            const time = new Date().toLocaleTimeString();
+            debug.innerHTML += '<div>[' + time + '] ' + message + '</div>';
+            debug.scrollTop = debug.scrollHeight;
+            console.log(message);
+        }
+
+        function startSSE() {
+            log('Starting SSE...');
+            
+            if (eventSource) {
+                eventSource.close();
+                log('Previous connection closed');
+            }
+
+            document.getElementById('status').innerText = 'กำลังเชื่อมต่อ...';
+
+            try {
+                eventSource = new EventSource('/sse/');
+                log('EventSource created');
+
+                eventSource.onopen = function(event) {
+                    log('SSE connection opened');
+                    document.getElementById('status').innerText = 'เชื่อมต่อสำเร็จ';
+                };
+
+                eventSource.onmessage = function(event) {
+                    const progress = event.data;
+                    log('Received: ' + progress);
+                    
+                    // Update progress in text
+                    document.getElementById('progress').innerText = 'Progress: ' + progress + '%';
+
+                    // Update circular progress
+                    const circle = document.getElementById('circle-progress');
+                    const offset = 314 - (progress / 100) * 314;
+                    circle.style.strokeDashoffset = offset;
+
+                    // Stop when progress reaches 100%
+                    if (progress == '100') {
+                        document.getElementById('status').innerText = 'เสร็จสิ้น!';
+                        eventSource.close();
+                        log('Process completed, connection closed');
+                    }
+                };
+
+                eventSource.onerror = function(event) {
+                    log('SSE Error occurred');
+                    console.error('SSE Error:', event);
+                    document.getElementById('status').innerText = 'เกิดข้อผิดพลาด!';
+                    document.getElementById('progress').innerText = 'เกิดข้อผิดพลาด!';
+
+                    if (eventSource.readyState === EventSource.CLOSED) {
+                        log('SSE connection was closed due to error');
+                    }
+                };
+
+            } catch (e) {
+                log('Exception creating EventSource: ' + e.message);
+                document.getElementById('status').innerText = 'ไม่สามารถเชื่อมต่อได้!';
+            }
+        }
+
+        function stopSSE() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+                log('SSE connection stopped by user');
+                document.getElementById('status').innerText = 'หยุดแล้ว';
+                document.getElementById('progress').innerText = 'หยุดแล้ว';
+            }
+        }
+    </script>
+
+</body>
+</html>
