@@ -6,9 +6,10 @@
 
 ## วิธีการนำไปใช้ใน Django
 ### ขั้นตอนที่ : ติดตั้ง Django
-python -m venv venv
-venv\Scripts\activate
-pip install django
-pip install -r requirements.txt
-cd djsse
-python manage.py runserver
+git clone https://github.com/your-username/djsse.git
+1.python -m venv venv
+2.venv\Scripts\activate
+3.pip install django
+4.pip install -r requirements.txt
+5.cd djsse
+6.python manage.py runserver
